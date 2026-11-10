@@ -16,7 +16,7 @@ $user_nama = isset($_SESSION['nama_lengkap']) ? $_SESSION['nama_lengkap'] : $_SE
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= isset($page_title) ? $page_title : 'Sistem Monitoring Energi kWh - PT PLN (Persero)'; ?></title>
+    <title><?= isset($page_title) ? $page_title : 'Sistem Monitoring kWh Meter EXIM  - PT PLN (Persero)'; ?></title>
     
     <!-- Google Fonts & Bootstrap 5 -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">

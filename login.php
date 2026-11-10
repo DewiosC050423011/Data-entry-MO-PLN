@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Sistem Monitoring Energi kWh PT PLN (Persero)</title>
+    <title>Login - Sistem Monitoring kWh Meter EXIM PT PLN (Persero)</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -152,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="login-header">
         <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_PLN.png" alt="Logo PLN" class="logo-pln">
         <div class="login-title">PT PLN (PERSERO)</div>
-        <div class="login-subtitle">UID KALSELTENG &bull; MONITORING ENERGI KWH</div>
+        <div class="login-subtitle">UID KALSELTENG &bull; MONITORING KWH EXIM</div>
     </div>
 
     <div class="p-4">

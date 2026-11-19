@@ -1,20 +1,21 @@
 <?php
 session_start();
 include 'config/koneksi.php';
+include 'includes/auth_helper.php';
 
-if (!isset($_SESSION['username'])) {
-    header("Location: login.php");
-    exit();
-}
+checkLogin();
 
 $bulan_pilihan = isset($_GET['bulan']) ? $_GET['bulan'] : date('Y-m');
+$lihat_selisih = (isAdmin() || isSuperAdmin());
+
+catatLog($koneksi, 'EXPORT EXCEL', "Mengunduh laporan Excel periode $bulan_pilihan.");
 
 // Auto deteksi URL Server
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
 $base_url = $protocol . $_SERVER['HTTP_HOST'] . dirname($_SERVER['PHP_SELF']) . '/';
 
 header("Content-Type: application/vnd.ms-excel; charset=utf-8");
-header("Content-Disposition: attachment; filename=Rekap_KWH_PLN_Periode_".$bulan_pilihan.".xls");
+header("Content-Disposition: attachment; filename=Rekap_KWH_EXIM_PLN_Periode_".$bulan_pilihan.".xls");
 ?>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" 
       xmlns:x="urn:schemas-microsoft-com:office:excel" 
@@ -34,8 +35,8 @@ header("Content-Disposition: attachment; filename=Rekap_KWH_PLN_Periode_".$bulan
 </head>
 <body>
 
-    <div class="title">REKAP ENERGI KIRIM-TERIMA ANTAR UP3</div>
-    <div class="subtitle">PERIODE BULAN: <?= date('F Y', strtotime($bulan_pilihan)); ?></div>
+    <div class="title">REKAP ENERGI KIRIM-TERIMA (kWh EXIM) ANTAR UP3</div>
+    <div class="subtitle">PT PLN (PERSERO) UID KALSELTENG &bull; PERIODE BULAN: <?= date('F Y', strtotime($bulan_pilihan)); ?></div>
 
     <table>
         <thead>
@@ -43,7 +44,9 @@ header("Content-Disposition: attachment; filename=Rekap_KWH_PLN_Periode_".$bulan
                 <th>Kirim dari - Ke</th>
                 <th>Versi Pengirim (kWh)</th>
                 <th>Versi Penerima (kWh)</th>
-                <th>SELISIH</th>
+                <?php if ($lihat_selisih): ?>
+                    <th>SELISIH (kWh)</th>
+                <?php endif; ?>
                 <th>NAMA MO</th>
                 <th>BUKTI FOTO METER (GEOTAG)</th>
             </tr>
@@ -53,36 +56,59 @@ header("Content-Disposition: attachment; filename=Rekap_KWH_PLN_Periode_".$bulan
             $query = mysqli_query($koneksi, "
                 SELECT master_mo.*, 
                        transaksi_kwh.kwh_hasil AS kwh_pengirim,
-                       transaksi_kwh.foto_meter 
+                       transaksi_kwh.kwh_penerima,
+                       transaksi_kwh.foto_meter,
+                       transaksi_kwh.foto_penerima
                 FROM master_mo 
                 LEFT JOIN transaksi_kwh ON master_mo.id = transaksi_kwh.mo_id AND transaksi_kwh.bulan_tahun='$bulan_pilihan'
+                ORDER BY master_mo.id ASC
             ");
 
             while ($row = mysqli_fetch_assoc($query)) {
                 $val_pengirim = $row['kwh_pengirim'];
-                $val_penerima = $val_pengirim; // Disamakan sementara
+                $val_penerima = $row['kwh_penerima'];
 
                 $str_pengirim = ($val_pengirim !== null) ? number_format($val_pengirim, 2, ',', '.') : '-';
                 $str_penerima = ($val_penerima !== null) ? number_format($val_penerima, 2, ',', '.') : '-';
-                $str_selisih  = ($val_pengirim !== null) ? "0,00" : "-";
-                $foto         = $row['foto_meter'];
+                
+                if ($val_pengirim !== null && $val_penerima !== null) {
+                    $str_selisih = number_format(abs($val_pengirim - $val_penerima), 2, ',', '.');
+                } else {
+                    $str_selisih = "-";
+                }
+
+                $foto_kirim  = $row['foto_meter'];
+                $foto_terima = $row['foto_penerima'];
                 ?>
                 <tr height="35">
-                    <td><b><?= $row['up3_pengirim'] . ' - ' . $row['up3_penerima']; ?></b></td>
+                    <td><b><?= htmlspecialchars($row['up3_pengirim'] . ' - ' . $row['up3_penerima']); ?></b></td>
                     <td><?= $str_pengirim; ?></td>
                     <td class="bg-penerima"><?= $str_penerima; ?></td>
-                    <td><b><?= $str_selisih; ?></b></td>
-                    <td style="text-align: left; padding-left: 10px;"><?= $row['nama_mo']; ?></td>
+                    <?php if ($lihat_selisih): ?>
+                        <td><b><?= $str_selisih; ?></b></td>
+                    <?php endif; ?>
+                    <td style="text-align: left; padding-left: 10px;"><?= htmlspecialchars($row['nama_mo']); ?></td>
                     <td>
                         <?php 
-                        $path_foto = 'uploads/foto_meter/' . $foto;
-                        if (!empty($foto) && file_exists($path_foto)): 
-                            $img_url = $base_url . $path_foto;
+                        $ada_foto = false;
+                        if (!empty($foto_kirim) && file_exists('uploads/foto_meter/' . $foto_kirim)): 
+                            $ada_foto = true;
                         ?>
-                            <a href="<?= $img_url; ?>" target="_blank" style="color: #0d6efd; font-weight: bold; text-decoration: underline;">
-                                📷 Lihat Foto Geotag
+                            <a href="<?= $base_url . 'uploads/foto_meter/' . $foto_kirim; ?>" target="_blank" style="color: #0d6efd; font-weight: bold;">
+                                📷 Foto Pengirim
                             </a>
-                        <?php else: ?>
+                        <?php endif; ?>
+
+                        <?php if (!empty($foto_terima) && file_exists('uploads/foto_meter/' . $foto_terima)): 
+                            if ($ada_foto) echo " | ";
+                            $ada_foto = true;
+                        ?>
+                            <a href="<?= $base_url . 'uploads/foto_meter/' . $foto_terima; ?>" target="_blank" style="color: #198754; font-weight: bold;">
+                                📷 Foto Penerima
+                            </a>
+                        <?php endif; ?>
+
+                        <?php if (!$ada_foto): ?>
                             <span style="color: #888;">Tidak Ada Foto</span>
                         <?php endif; ?>
                     </td>
